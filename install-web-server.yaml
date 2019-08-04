@@ -1,0 +1,30 @@
+- hosts: all
+  become: true
+
+  tasks:
+    - name: Install Nginx & packages
+      apt:
+        name: "{{ packages }}"
+      vars:
+        packages:
+          - nginx
+
+    - name: Remove default template
+      file: 
+        path: "/etc/nginx/sites-enabled/default"
+        state: absent
+
+    - name: Upload web server config
+      template:  
+        src: templates/web-site.j2
+        dest: "/etc/nginx/sites-enabled/web-site.conf"
+
+    - name: Restart and enable Nginx
+      systemd:
+        name: nginx
+        state: restarted
+        enabled: yes
+
+
+
+
