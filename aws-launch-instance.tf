@@ -96,6 +96,13 @@ resource "aws_key_pair" "terraform_ec2_key" {
   public_key = "${var.ssh_pub_key}"
 }
 
+# Upload index.html file to s3
+resource "aws_s3_bucket_object" "s3_object" {
+  bucket = "${var.s3_bucket}"
+  key    = "${var.s3_object}"
+  source = "${var.s3_file_to_upload}"
+}
+
 # Post-creation commands. Install python2, run Ansible playbook
 resource "null_resource" "run_ssh_command" {
   provisioner "remote-exec" {

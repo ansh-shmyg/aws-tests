@@ -48,5 +48,11 @@
         name: nginx
         state: reloaded
         
-
+    - name: Add crontab task to get index.html after boot
+      cron:
+        name: "Dowload index.html file at reboot"
+        cron_file: s3-tasks
+        user: root
+        special_time: reboot
+        job: "/usr/bin/aws s3 cp s3://{{ aws_s3_bucket }}/{{ aws_s3_object }} /var/www/html/index.html"
 
