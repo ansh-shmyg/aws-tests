@@ -1,10 +1,29 @@
+# Set provider
 provider "aws" {
-  access_key = "${var.aws_access_key}"
-  secret_key = "${var.aws_secret_key}"
+  shared_credentials_file = "${file(var.aws_credential_path)}"
   region = "${var.aws_region}"
 }
 
+# IAM roles, policies
+resource "aws_iam_role" "s3_read_role" {
+  name               = "tf_s3_read_role"
+  description = "S3 read access. Role"
+  assume_role_policy = "${file("terraform_files/aws_assumerolepolicy.json")}"
+}
 
+resource "aws_iam_policy" "s3_read_policy" {
+  name        = "tf_s3_read_policy"
+  description = "S3 read access. Policy"
+  policy      = "${file("terraform_files/aws_policy_s3_read.json")}"
+}
+
+resource "aws_iam_policy_attachment" "attach_s3_read_policy" {
+  name       = "attach_s3_read"
+  roles      = ["${aws_iam_role.s3_read_role.name}"]
+  policy_arn = "${aws_iam_policy.s3_read_policy.arn}"
+}
+
+# network ACL
 resource "aws_security_group" "allow_ports_web_server" {
   name        = "allow_http_ssh_icpm"
   description = "Allow SSH, HTTP, TLS, ICMP inbound traffic"
@@ -49,10 +68,17 @@ resource "aws_security_group" "allow_ports_web_server" {
   }
 }
 
+# EC2 VPS creation, configuration
+resource "aws_iam_instance_profile" "s3_read_profile" {
+  name = "s3_read"
+  role = "${aws_iam_role.s3_read_role.name}"
+}
+
 resource "aws_instance" "web-server-01" {
-  ami = "ami-07d0cf3af28718ef8"
-  instance_type = "t2.micro"
+  ami = "${var.ec2_ami_id}"
+  instance_type = "${var.ec2_instance_type}"
   key_name = "terraform_ec2_key"
+  iam_instance_profile = "${aws_iam_instance_profile.s3_read_profile.name}"
   
   tags = {
     Name = "web-server-01"
@@ -70,7 +96,7 @@ resource "aws_key_pair" "terraform_ec2_key" {
   public_key = "${var.ssh_pub_key}"
 }
 
-
+# Post-creation commands. Install python2, run Ansible playbook
 resource "null_resource" "run_ssh_command" {
   provisioner "remote-exec" {
   inline = [

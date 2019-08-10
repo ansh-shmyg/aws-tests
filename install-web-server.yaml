@@ -1,6 +1,9 @@
 - hosts: all
   become: true
-
+  vars:
+    aws_s3_bucket: "web-server-content-23-08-19"
+    aws_s3_object: "index.html"
+    
   tasks:
     - name: Install Nginx & packages
       apt:
@@ -8,6 +11,14 @@
       vars:
         packages:
           - nginx
+          - awscli
+          - python-pip
+
+    - name: Install pip Ansible dependencies
+      pip: 
+        name: 
+          - botocore 
+          - boto3
 
     - name: Remove default template
       file: 
@@ -25,6 +36,17 @@
         state: restarted
         enabled: yes
 
+    - name: Upload s3 index.html 
+      aws_s3:      
+        bucket: "{{ aws_s3_bucket }}"
+        object: "{{ aws_s3_object }}"
+        dest: /var/www/html/index.html
+        mode: get
 
+    - name: Reload Nginx
+      systemd:
+        name: nginx
+        state: reloaded
+        
 
 
